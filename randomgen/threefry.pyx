@@ -11,43 +11,9 @@ from randomgen.distributions cimport brng_t
 from randomgen.entropy import random_entropy, seed_by_array
 import randomgen.pickle
 
-np.import_array()
-
 DEF THREEFRY_BUFFER_SIZE=4
 
-cdef extern from 'src/threefry/threefry.h':
-    struct s_r123array4x64:
-        uint64_t v[4]
-
-    ctypedef s_r123array4x64 r123array4x64
-
-    ctypedef r123array4x64 threefry4x64_key_t
-    ctypedef r123array4x64 threefry4x64_ctr_t
-
-    struct s_threefry_state:
-        threefry4x64_ctr_t *ctr;
-        threefry4x64_key_t *key;
-        int buffer_pos;
-        uint64_t buffer[THREEFRY_BUFFER_SIZE];
-        int has_uint32
-        uint32_t uinteger
-
-    ctypedef s_threefry_state threefry_state
-
-    uint64_t threefry_next64(threefry_state *state)  nogil
-    uint32_t threefry_next32(threefry_state *state)  nogil
-    void threefry_jump(threefry_state *state)
-    void threefry_advance(uint64_t *step, threefry_state *state)
-
-
-cdef uint64_t threefry_uint64(void* st) nogil:
-    return threefry_next64(<threefry_state *>st)
-
-cdef uint32_t threefry_uint32(void *st) nogil:
-    return threefry_next32(<threefry_state *> st)
-
-cdef double threefry_double(void* st) nogil:
-    return uint64_to_double(threefry_next64(<threefry_state *>st))
+np.import_array()
 
 cdef class ThreeFry:
     """
@@ -154,13 +120,6 @@ cdef class ThreeFry:
            the International Conference for High Performance Computing,
            Networking, Storage and Analysis (SC11), New York, NY: ACM, 2011.
     """
-    cdef threefry_state  *rng_state
-    cdef brng_t *_brng
-    cdef public object capsule
-    cdef object _ctypes
-    cdef object _cffi
-    cdef object _generator
-
 
     def __init__(self, seed=None, counter=None, key=None):
         self.rng_state = <threefry_state *>malloc(sizeof(threefry_state))
@@ -199,13 +158,6 @@ cdef class ThreeFry:
         free(self.rng_state.key)
         free(self.rng_state)
         free(self._brng)
-
-    cdef _reset_state_variables(self):
-        self.rng_state.has_uint32 = 0
-        self.rng_state.uinteger = 0
-        self.rng_state.buffer_pos = THREEFRY_BUFFER_SIZE
-        for i in range(THREEFRY_BUFFER_SIZE):
-            self.rng_state.buffer[i] = 0
 
     def _benchmark(self, Py_ssize_t cnt, method=u'uint64'):
         cdef Py_ssize_t i
